@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use nom::{
     branch::alt,
     bytes::complete::{tag, take, take_while},
@@ -5,7 +7,9 @@ use nom::{
     combinator::value,
     multi::separated_list0,
     number::complete::double,
-    sequence::{delimited, preceded, terminated},
+    sequence::{
+        delimited, preceded, separated_pair, terminated,
+    },
     IResult, Parser,
 };
 
@@ -17,10 +21,12 @@ pub enum Value<'a> {
     Char(char),
     List(Vec<Value<'a>>),
     Optional(Option<Box<Value<'a>>>),
+    Object(HashMap<&'a str, Value<'a>>),
 }
 
 pub fn parse_value(input: &str) -> IResult<&str, Value> {
     alt((
+        parse_object.map(Value::Object),
         parse_list.map(Value::List),
         parse_optional.map(Value::Optional),
         parse_double.map(Value::Float),
@@ -28,6 +34,32 @@ pub fn parse_value(input: &str) -> IResult<&str, Value> {
         parse_string.map(Value::String),
         parse_boolean.map(Value::Boolean),
     ))(input)
+}
+
+fn parse_object(
+    input: &str,
+) -> IResult<&str, HashMap<&str, Value>> {
+    fn parse_key_value(
+        input: &str,
+    ) -> IResult<&str, (&str, Value)> {
+        separated_pair(
+            preceded(parse_ws, parse_string),
+            preceded(parse_ws, char(':')),
+            parse_value,
+        )(input)
+    }
+
+    preceded(
+        char('{'),
+        terminated(
+            separated_list0(
+                preceded(parse_ws, char(',')),
+                parse_key_value,
+            )
+            .map(|tuple_vec| tuple_vec.into_iter().collect()),
+            preceded(parse_ws, char('}')),
+        ),
+    )(input)
 }
 
 fn parse_optional(
