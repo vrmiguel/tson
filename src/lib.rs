@@ -16,13 +16,13 @@ pub enum Value<'a> {
     String(&'a str),
     Char(char),
     List(Vec<Value<'a>>),
-    Option(Option<Box<Value<'a>>>),
+    Optional(Option<Box<Value<'a>>>),
 }
 
 pub fn parse_value(input: &str) -> IResult<&str, Value> {
     alt((
         parse_list.map(Value::List),
-        parse_option.map(Value::Option),
+        parse_optional.map(Value::Optional),
         parse_double.map(Value::Float),
         parse_char.map(Value::Char),
         parse_string.map(Value::String),
@@ -30,7 +30,7 @@ pub fn parse_value(input: &str) -> IResult<&str, Value> {
     ))(input)
 }
 
-fn parse_option(
+fn parse_optional(
     input: &str,
 ) -> IResult<&str, Option<Box<Value>>> {
     let parse_none = value(None, tag("None"));
@@ -106,7 +106,7 @@ fn parse_double(input: &str) -> IResult<&str, f64> {
 mod tests {
     use crate::{
         parse_boolean, parse_char, parse_double, parse_list,
-        parse_option, parse_string, parse_value, Value,
+        parse_optional, parse_string, parse_value, Value,
     };
 
     #[test]
@@ -140,21 +140,21 @@ mod tests {
     #[test]
     fn parses_option() {
         assert_eq!(
-            parse_option("Some(2)"),
+            parse_optional("Some(2)"),
             Ok(("", Some(Box::new(Value::Float(2.0)))))
         );
 
         assert_eq!(
-            parse_option("Some('a')"),
+            parse_optional("Some('a')"),
             Ok(("", Some(Box::new(Value::Char('a')))))
         );
 
         assert_eq!(
-            parse_option("Some(\"hey\")"),
+            parse_optional("Some(\"hey\")"),
             Ok(("", Some(Box::new(Value::String("hey")))))
         );
 
-        assert_eq!(parse_option("None"), Ok(("", None)));
+        assert_eq!(parse_optional("None"), Ok(("", None)));
     }
 
     #[test]
